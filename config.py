@@ -14,9 +14,11 @@ flags.DEFINE_float('lambda_val', 0.5, 'down weight of the loss for absent digit 
 
 # for training
 flags.DEFINE_integer('batch_size', 128, 'batch size')
-flags.DEFINE_integer('epoch', 50, 'epoch')
+flags.DEFINE_integer('epoch', 1, 'epoch')
 flags.DEFINE_integer('iter_routing', 3, 'number of iterations in routing algorithm')
 flags.DEFINE_boolean('mask_with_y', True, 'use the true label to mask out target capsule or not')
+flags.DEFINE_integer('train_data_number', 1280,'取多少数据进行训练')
+flags.DEFINE_integer('validation_data_number',256,'取多少数据进行校验')
 
 flags.DEFINE_float('stddev', 0.01, 'stddev for W initializer')
 flags.DEFINE_float('regularization_scale', 0.392, 'regularization coefficient for reconstruction loss, default to 0.0005*784=0.392')
@@ -37,7 +39,7 @@ flags.DEFINE_string('results', 'results', 'path for saving results')
 ############################
 #   distributed setting    #
 ############################
-flags.DEFINE_integer('num_gpu', 2, 'number of gpus for distributed training')
+flags.DEFINE_integer('num_gpu', 0, 'number of gpus for distributed training')
 flags.DEFINE_integer('batch_size_per_gpu', 128, 'batch size on 1 gpu')
 flags.DEFINE_integer('thread_per_gpu', 4, 'Number of preprocessing threads per tower.')
 

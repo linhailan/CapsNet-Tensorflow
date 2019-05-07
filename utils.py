@@ -1,4 +1,5 @@
 import os
+from config import cfg
 import scipy
 import numpy as np
 import tensorflow as tf
@@ -15,14 +16,20 @@ def load_mnist(batch_size, is_training=True):
         loaded = np.fromfile(file=fd, dtype=np.uint8)
         trainY = loaded[8:].reshape((60000)).astype(np.int32)
 
-        trX = trainX[:55000] / 255.
-        trY = trainY[:55000]
+        # trX = trainX[:55000] / 255.
+        # trY = trainY[:55000]
+        trX = trainX[:cfg.train_data_number] / 255.
+        trY = trainY[:cfg.train_data_number]
 
-        valX = trainX[55000:, ] / 255.
-        valY = trainY[55000:]
+        # valX = trainX[55000:, ] / 255.
+        # valY = trainY[55000:]
+        valX = trainX[55000:cfg.validation_data_number+55000]
+        valY = trainY[55000:cfg.validation_data_number+55000]
 
-        num_tr_batch = 55000 // batch_size
-        num_val_batch = 5000 // batch_size
+        # num_tr_batch = 55000 // batch_size
+        # num_val_batch = 5000 // batch_size
+        num_tr_batch = cfg.train_data_number // batch_size
+        num_val_batch = cfg.validation_data_number // batch_size
 
         return trX, trY, num_tr_batch, valX, valY, num_val_batch
     else:
