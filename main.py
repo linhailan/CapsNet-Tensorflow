@@ -17,6 +17,7 @@ def save_to():
         train_acc = cfg.results + '/train_acc.csv'
         val_acc = cfg.results + '/val_acc.csv'
 
+        # 删除以前的训练数据文件
         if os.path.exists(val_acc):
             os.remove(val_acc)
         if os.path.exists(loss):
@@ -24,19 +25,26 @@ def save_to():
         if os.path.exists(train_acc):
             os.remove(train_acc)
 
+        # 获取训练文件写入器
         fd_train_acc = open(train_acc, 'w')
         fd_train_acc.write('step,train_acc\n')
+
         fd_loss = open(loss, 'w')
         fd_loss.write('step,loss\n')
+
         fd_val_acc = open(val_acc, 'w')
         fd_val_acc.write('step,val_acc\n')
+
         return(fd_train_acc, fd_loss, fd_val_acc)
     else:
         test_acc = cfg.results + '/test_acc.csv'
         if os.path.exists(test_acc):
             os.remove(test_acc)
+
+        # 获取测试结果文件写入器
         fd_test_acc = open(test_acc, 'w')
         fd_test_acc.write('test_acc\n')
+
         return(fd_test_acc)
 
 
@@ -44,9 +52,12 @@ def train(model, supervisor, num_label):
     trX, trY, num_tr_batch, valX, valY, num_val_batch = load_data(cfg.dataset, cfg.batch_size, is_training=True)
     Y = valY[:num_val_batch * cfg.batch_size].reshape((-1, 1))
 
+    # 获取三个训练数据写入器
     fd_train_acc, fd_loss, fd_val_acc = save_to()
+
     config = tf.ConfigProto()
     config.gpu_options.allow_growth = True
+
     with supervisor.managed_session(config=config) as sess:
         print("\nNote: all of results will be saved to directory: " + cfg.results)
         for epoch in range(cfg.epoch):
@@ -59,19 +70,26 @@ def train(model, supervisor, num_label):
                 end = start + cfg.batch_size
                 global_step = epoch * num_tr_batch + step
 
-                if global_step % cfg.train_sum_freq == 0:
-                    _, loss, train_acc, summary_str = sess.run([model.train_op, model.total_loss, model.accuracy, model.train_summary])
+                write_step = min(cfg.train_sum_freq,num_tr_batch)
+                if global_step % write_step == 0:
+                    _, loss, train_acc, summary_str = sess.run(
+                        [model.train_op, model.total_loss, model.accuracy, model.train_summary])
                     assert not np.isnan(loss), 'Something wrong! loss is nan...'
+
                     supervisor.summary_writer.add_summary(summary_str, global_step)
 
+                    # 将当前误差写入文件
                     fd_loss.write(str(global_step) + ',' + str(loss) + "\n")
                     fd_loss.flush()
+                    # 将当前训练数据定入文件
                     fd_train_acc.write(str(global_step) + ',' + str(train_acc / cfg.batch_size) + "\n")
                     fd_train_acc.flush()
                 else:
                     sess.run(model.train_op)
 
-                if cfg.val_sum_freq != 0 and (global_step) % cfg.val_sum_freq == 0:
+                # 校验  validation
+                validation_step = min(cfg.val_sum_freq, num_tr_batch)
+                if cfg.val_sum_freq != 0 and (global_step) %  validation_step == 0:
                     val_acc = 0
                     for i in range(num_val_batch):
                         start = i * cfg.batch_size
@@ -82,9 +100,11 @@ def train(model, supervisor, num_label):
                     fd_val_acc.write(str(global_step) + ',' + str(val_acc) + '\n')
                     fd_val_acc.flush()
 
-            if (epoch + 1) % cfg.save_freq == 0:
+            write_epoch = min(cfg.epoch,cfg.save_freq)
+            if (epoch + 1) % write_epoch == 0:
                 supervisor.saver.save(sess, cfg.logdir + '/model_epoch_%04d_step_%02d' % (epoch, global_step))
 
+        # 关闭三个文件写入器
         fd_val_acc.close()
         fd_train_acc.close()
         fd_loss.close()
@@ -94,7 +114,8 @@ def evaluation(model, supervisor, num_label):
     teX, teY, num_te_batch = load_data(cfg.dataset, cfg.batch_size, is_training=False)
     fd_test_acc = save_to()
     with supervisor.managed_session(config=tf.ConfigProto(allow_soft_placement=True)) as sess:
-        supervisor.saver.restore(sess, tf.train.latest_checkpoint(cfg.logdir))
+        checkpoint = tf.train.latest_checkpoint(cfg.logdir)
+        supervisor.saver.restore(sess, checkpoint)
         tf.logging.info('Model restored!')
 
         test_acc = 0
@@ -123,6 +144,8 @@ def main(_):
         tf.logging.info('Training done')
     else:
         evaluation(model, sv, num_label)
+
+    return 0
 
 if __name__ == "__main__":
     tf.app.run()
