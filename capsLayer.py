@@ -17,29 +17,27 @@ epsilon = 1e-9
 
 
 class CapsLayer(object):
-    ''' Capsule layer.
-    Args:
-        input: A 4-D tensor.
-        num_outputs: the number of capsule in this layer.
-        vec_len: integer, the length of the output vector of a capsule.
-        layer_type: string, one of 'FC' or "CONV", the type of this layer,
-            fully connected or convolution, for the future expansion capability
-        with_routing: boolean, this capsule is routing with the
-                      lower-level layer capsule.
-
-    Returns:
-        A 4-D tensor.
-    '''
     def __init__(self, num_outputs, vec_len, with_routing=True, layer_type='FC'):
+        """
+        :param num_outputs: the number of capsule in this layer.
+        :param vec_len: integer, the length of the output vector of a capsule.
+        :param with_routing: boolean, this capsule is routing with the
+                      lower-level layer capsule.
+        :param layer_type: string, one of 'FC' or "CONV", the type of this layer,
+            fully connected or convolution, for the future expansion capability
+        """
         self.num_outputs = num_outputs
         self.vec_len = vec_len
         self.with_routing = with_routing
         self.layer_type = layer_type
 
-    def __call__(self, input, kernel_size=None, stride=None):
-        '''
-        The parameters 'kernel_size' and 'stride' will be used while 'layer_type' equal 'CONV'
-        '''
+    def __call__(self,capsnet_input, kernel_size=None, stride=None):
+        """
+        :param capsnet_input:  A 4-D tensor.
+        :param kernel_size: will be used while 'layer_type" equal 'CONV'
+        :param stride:  will be used while 'layer_type" equal 'CONV'
+        :return: A 4-D tensor.
+        """
         if self.layer_type == 'CONV':
             self.kernel_size = kernel_size
             self.stride = stride
@@ -47,14 +45,14 @@ class CapsLayer(object):
             if not self.with_routing:
                 # the PrimaryCaps layer, a convolutional layer
                 # input: [batch_size, 20, 20, 256]
-                # assert input.get_shape() == [cfg.batch_size, 20, 20, 256]
+                assert capsnet_input.get_shape() == [cfg.batch_size,20,20,256]
 
                 # NOTE: I can't find out any words from the paper whether the
                 # PrimaryCap convolution does a ReLU activation or not before
                 # squashing function, but experiment show that using ReLU get a
                 # higher test accuracy. So, which one to use will be your choice
-                capsules = tf.contrib.layers.conv2d(input, self.num_outputs * self.vec_len,
-                                                    self.kernel_size, self.stride, padding="VALID",
+                capsules = tf.contrib.layers.conv2d(capsnet_input,self.num_outputs * self.vec_len,
+                                                    self.kernel_size,self.stride,padding="VALID",
                                                     activation_fn=tf.nn.relu)
                 # capsules = tf.contrib.layers.conv2d(input, self.num_outputs * self.vec_len,
                 #                                    self.kernel_size, self.stride,padding="VALID",
@@ -69,12 +67,12 @@ class CapsLayer(object):
             if self.with_routing:
                 # the DigitCaps layer, a fully connected layer
                 # Reshape the input into [batch_size, 1152, 1, 8, 1]
-                self.input = tf.reshape(input, shape=(cfg.batch_size, -1, 1, input.shape[-2].value, 1))
+                self.input = tf.reshape(capsnet_input,shape=(cfg.batch_size,-1,1,capsnet_input.shape[-2].value,1))
 
                 with tf.variable_scope('routing'):
                     # b_IJ: [batch_size, num_caps_l, num_caps_l_plus_1, 1, 1],
                     # about the reason of using 'batch_size', see issue #21
-                    b_IJ = tf.constant(np.zeros([cfg.batch_size, input.shape[1].value, self.num_outputs, 1, 1], dtype=np.float32))
+                    b_IJ = tf.constant(np.zeros([cfg.batch_size,capsnet_input.shape[1].value,self.num_outputs,1,1],dtype=np.float32))
                     capsules = routing(self.input, b_IJ, num_outputs=self.num_outputs, num_dims=self.vec_len)
                     capsules = tf.squeeze(capsules, axis=1)
 
