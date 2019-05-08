@@ -35,14 +35,20 @@ def load_mnist(batch_size, is_training=True):
     else:
         fd = open(os.path.join(path, 't10k-images-idx3-ubyte'))
         loaded = np.fromfile(file=fd, dtype=np.uint8)
-        teX = loaded[16:].reshape((10000, 28, 28, 1)).astype(np.float)
+        testX = loaded[16:].reshape((10000, 28, 28, 1)).astype(np.float)
+
+        teX = testX[:cfg.test_data_number] / 255.
 
         fd = open(os.path.join(path, 't10k-labels-idx1-ubyte'))
         loaded = np.fromfile(file=fd, dtype=np.uint8)
-        teY = loaded[8:].reshape((10000)).astype(np.int32)
+        testy = loaded[8:].reshape((10000)).astype(np.int32)
 
-        num_te_batch = 10000 // batch_size
-        return teX / 255., teY, num_te_batch
+        teY = testy[:cfg.test_data_number]
+
+        # num_te_batch = 10000 // batch_size
+        # return teX / 255., teY, num_te_batch
+        num_test_batch = cfg.test_data_number // batch_size
+        return  teX, teY, num_test_batch
 
 
 def load_fashion_mnist(batch_size, is_training=True):
