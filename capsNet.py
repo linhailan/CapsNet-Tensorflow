@@ -51,7 +51,7 @@ class CapsNet(object):
                 self.Y = tf.reshape(self.labels, shape=(cfg.batch_size, self.num_label, 1))
                 self.build_arch()
 
-        tf.logging.info('Seting up the main structure')
+        tf.logging.info("Setting up {} network structure".format('train' if is_training else 'test'))
 
     def build_arch(self):
         with tf.variable_scope('Conv1_layer'):
@@ -75,15 +75,21 @@ class CapsNet(object):
         with tf.variable_scope('Masking'):
             # a). calc ||v_c||, then do softmax(||v_c||)
             # [batch_size, 10, 16, 1] => [batch_size, 10, 1, 1]
-            self.v_length = tf.sqrt(reduce_sum(tf.square(self.caps2),
-                                               axis=2, keepdims=True) + epsilon)
-            self.softmax_v = softmax(self.v_length, axis=1)
-            # assert self.softmax_v.get_shape() == [cfg.batch_size, self.num_label, 1, 1]
+            # tf.sqrt 求平方根函数, tf.square 求平方函数
+            self.v_length = tf.sqrt(tf.reduce_sum(tf.square(self.caps2), axis=2,keepdims=True)
+                                    + epsilon)
+
+            # softmax = tf.exp(logits) / tf.reduce_sum(tf.exp(logits), axis)
+            # self.softmax_v = tf.exp(self.v_length) / tf.reduce_sum(tf.exp(self.v_length),1)
+            self.softmax_v = tf.nn.softmax(self.v_length, axis=1)
+            assert self.softmax_v.get_shape() == [cfg.batch_size, self.num_label, 1, 1]
 
             # b). pick out the index of max softmax val of the 10 caps
             # [batch_size, 10, 1, 1] => [batch_size] (index)
+            # 求维度axis上的最大值的索引
             self.argmax_idx = tf.to_int32(tf.argmax(self.softmax_v, axis=1))
-            # assert self.argmax_idx.get_shape() == [cfg.batch_size, 1, 1]
+            assert self.argmax_idx.get_shape() == [cfg.batch_size, 1, 1]
+
             self.argmax_idx = tf.reshape(self.argmax_idx, shape=(cfg.batch_size, ))
 
             # Method 1.
@@ -150,11 +156,14 @@ class CapsNet(object):
     # Summary
     def _summary(self):
         train_summary = []
-        train_summary.append(tf.summary.scalar('train/margin_loss', self.margin_loss))
-        train_summary.append(tf.summary.scalar('train/reconstruction_loss', self.reconstruction_err))
-        train_summary.append(tf.summary.scalar('train/total_loss', self.total_loss))
+        train_summary.append(tf.summary.scalar('margin_loss/train', self.margin_loss))
+        train_summary.append(tf.summary.scalar('reconstruction_loss/train', self.reconstruction_err))
+        train_summary.append(tf.summary.scalar('total_loss/train', self.total_loss))
+
+        # 保存图片
         recon_img = tf.reshape(self.decoded, shape=(cfg.batch_size, self.height, self.width, self.channels))
         train_summary.append(tf.summary.image('reconstruction_img', recon_img))
+
         self.train_summary = tf.summary.merge(train_summary)
 
         correct_prediction = tf.equal(tf.to_int32(self.labels), self.argmax_idx)
