@@ -19,12 +19,13 @@ epsilon = 1e-9
 class CapsNet(object):
     def __init__(self, is_training=True, height=28, width=28, channels=1, num_label=10):
         """
-        Args:
-            height: Integer, the height of inputs.
-            width: Integer, the width of inputs.
-            channels: Integer, the channels of inputs.
-            num_label: Integer, the category number.
+        :param is_training:  boolean, 训练还是测试
+        :param height:  Integer, the height of inputs.
+        :param width:   Integer, the width of inputs.
+        :param channels:  Integer, the channels of inputs.
+        :param num_label:  Integer, the category number.
         """
+
         self.height = height
         self.width = width
         self.channels = channels
@@ -34,7 +35,10 @@ class CapsNet(object):
 
         with self.graph.as_default():
             if is_training:
-                self.X, self.labels = get_batch_data(cfg.dataset, cfg.batch_size, cfg.num_threads)
+                self.X, self.labels = get_batch_data(cfg.dataset, cfg.batch_size, cfg.num_threads,
+                                                     train_data_number=cfg.train_data_number,
+                                                     validation_data_number=cfg.validation_data_number,
+                                                     test_data_number=cfg.test_data_number)
                 self.Y = tf.one_hot(self.labels, depth=self.num_label, axis=1, dtype=tf.float32)
 
                 self.build_arch()
@@ -62,13 +66,15 @@ class CapsNet(object):
 
         # Primary Capsules layer, return tensor with shape [batch_size, 1152, 8, 1]
         with tf.variable_scope('PrimaryCaps_layer'):
-            primaryCaps = CapsLayer(num_outputs=32, vec_len=8, with_routing=False, layer_type='CONV')
-            caps1 = primaryCaps(conv1, kernel_size=9, stride=2)
+            primaryCaps = CapsLayer(num_outputs=32,vec_len=8,with_routing=False,layer_type='CONV')
+            capsule_layer_1 = primaryCaps(conv1, kernel_size=9, stride=2)
+            assert capsule_layer_1.get_shape() == [cfg.batch_size,1152,8,1]
 
         # DigitCaps layer, return shape [batch_size, 10, 16, 1]
         with tf.variable_scope('DigitCaps_layer'):
-            digitCaps = CapsLayer(num_outputs=self.num_label, vec_len=16, with_routing=True, layer_type='FC')
-            self.caps2 = digitCaps(caps1)
+            # 全连接层，capsule的数量是标签的个数，向量的长度是16
+            digitCaps = CapsLayer(num_outputs=self.num_label,vec_len=16,with_routing=True,layer_type='FC')
+            self.caps2 = digitCaps(capsule_layer_1)
 
         # Decoder structure in Fig. 2
         # 1. Do masking, how:
