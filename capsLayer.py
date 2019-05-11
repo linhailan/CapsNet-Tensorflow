@@ -110,13 +110,6 @@ def routing(input, b_IJ, num_outputs=10, num_dims=16):
                         dtype=tf.float32, initializer=tf.random_normal_initializer(stddev=cfg.stddev))
     biases = tf.get_variable('bias', shape=(1, 1, num_outputs, num_dims, 1))
 
-
-    # Eq.2, calc u_hat
-    # Since tf.matmul is a time-consuming op,
-    # A better solution is using element-wise multiply, reduce_sum and reshape
-    # ops instead. Matmul [a, b] x [b, c] is equal to a series ops as
-    # element-wise multiply [a*c, b] * [a*c, b], reduce_sum at axis=1 and
-    # reshape to [a, c]
     input = tf.tile(input, [1, 1, num_dims * num_outputs, 1, 1])
     # assert input.get_shape() == [cfg.batch_size, 1152, 160, 8, 1]
 
