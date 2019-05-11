@@ -49,7 +49,11 @@ def save_to():
 
 
 def train(model, supervisor, num_label):
-    trX, trY, num_tr_batch, valX, valY, num_val_batch = load_data(cfg.dataset, cfg.batch_size, is_training=True)
+    trX, trY, num_tr_batch, valX, valY, num_val_batch = load_data(cfg.dataset, cfg.batch_size, is_training=True,
+                            train_data_number=cfg.train_data_number,
+                            validation_data_number=cfg.validation_data_number,
+                            test_data_number=cfg.test_data_number)
+
     Y = valY[:num_val_batch * cfg.batch_size].reshape((-1, 1))
 
     # 获取三个训练数据写入器
@@ -131,10 +135,10 @@ def evaluation(model, supervisor, num_label):
 
 
 def main(_):
-    tf.logging.info(' Loading Graph...')
+    tf.logging.info(' 获取CapsNet计算图...')
     num_label = 10
     model = CapsNet()
-    tf.logging.info(' Graph loaded')
+    tf.logging.info(' 计算图已经加载 ')
 
     sv = tf.train.Supervisor(graph=model.graph, logdir=cfg.logdir, save_model_secs=0)
 
@@ -149,4 +153,3 @@ def main(_):
 
 if __name__ == "__main__":
     tf.app.run()
-    print("************")
