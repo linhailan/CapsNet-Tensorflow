@@ -50,9 +50,9 @@ def save_to():
 
 def train(model, supervisor, num_label):
     trX, trY, num_tr_batch, valX, valY, num_val_batch = load_data(cfg.dataset, cfg.batch_size, is_training=True,
-                            train_data_number=cfg.train_data_number,
-                            validation_data_number=cfg.validation_data_number,
-                            test_data_number=cfg.test_data_number)
+                                                                  train_data_number=cfg.train_data_number,
+                                                                  validation_data_number=cfg.validation_data_number,
+                                                                  test_data_number=cfg.test_data_number)
 
     Y = valY[:num_val_batch * cfg.batch_size].reshape((-1, 1))
 
@@ -74,7 +74,7 @@ def train(model, supervisor, num_label):
                 end = start + cfg.batch_size
                 global_step = epoch * num_tr_batch + step
 
-                write_step = min(cfg.train_sum_freq,num_tr_batch)
+                write_step = min(cfg.train_sum_freq, num_tr_batch)
                 if global_step % write_step == 0:
                     _, loss, train_acc, summary_str = sess.run(
                         [model.train_op, model.total_loss, model.accuracy, model.train_summary])
@@ -85,7 +85,8 @@ def train(model, supervisor, num_label):
                     # 将当前误差写入文件
                     fd_loss.write(str(global_step) + ',' + str(loss) + "\n")
                     fd_loss.flush()
-                    # 将当前训练数据定入文件
+
+                    # 将当前训练数据写入文件
                     fd_train_acc.write(str(global_step) + ',' + str(train_acc / cfg.batch_size) + "\n")
                     fd_train_acc.flush()
                 else:

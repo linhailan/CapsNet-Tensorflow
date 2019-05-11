@@ -93,6 +93,13 @@ def routing(input, b_IJ, num_outputs=10, num_dims=16):
     Notes:
         u_i represents the vector output of capsule i in the layer l, and
         v_j the vector output of capsule j in the layer l+1.
+
+        矩阵相乘操作tf.matmul比较耗费时间，可以用一系列操作代替。[a,b]@[b,c]等同于以下操作：
+        (1)[a,b]--->[a*c,b],用np.tile或tp.tile实现
+        (2)[b,c]--->[b,c*a]--->转置成[c*a,b]
+        (3)[a*c,b]*[c*a,b]
+        (4)reduce_sum at axis = 1
+        (5) reshape to [a,c]
      '''
 
     # W: [1, num_caps_i, num_caps_j * len_v_j, len_u_j, 1]
