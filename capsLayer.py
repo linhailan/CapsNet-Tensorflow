@@ -83,7 +83,6 @@ class CapsLayer(object):
 
 def routing(l_input, b_IJ, num_outputs=10, num_dims=16):
     """
-
     :param l_input:  A Tensor with [batch_size, num_caps_l=1152, 1, length(u_i)=8, 1] shape,
                     num_caps_l是前一层输出的capsule的数量
     :param b_IJ:   A Tensor whth [batch_size,num_caps_l,num_caps_l_plus_1,1,1] shape,
@@ -104,22 +103,18 @@ def routing(l_input, b_IJ, num_outputs=10, num_dims=16):
         (4)reduce_sum at axis = 1
         (5) reshape to [a,c]
     """
-
     input_shape = get_shape(l_input)
     W = tf.get_variable('Weight', shape=[1, input_shape[1], num_dims * num_outputs] + input_shape[-2:],
                         dtype=tf.float32, initializer=tf.random_normal_initializer(stddev=cfg.stddev))
-
     biases = tf.get_variable('bias', shape=(1, 1, num_outputs, num_dims, 1))
-
     l_input = tf.tile(l_input,[1,1,num_dims * num_outputs,1,1])
-
     """
-    W的形状是[1,1152,160,8,1],代表它要表达1152个输入capsule与160个输出capsule向量值的关系
+    W的形状是[1,1152,160,8,1],代表它要表达每张图片1152个输入capsule与160个输出capsule的向量值的关系
     input的形状是[128,1152,1,8,1],代表的是128张图片，每张图片输出1152个capsule,每个capsule的维数的长度是8
+        input记录第l层的每个capsule的具体取值
     u_hat的形状是[128,1152,160,1,1]或者[128,1152,10,16,1],
-        代表128张图片，每张图片中，第l层的每个capsule对应第l+1层的capsule的向量值
+        代表128张图片，每张图片中，第l层的每个capsule对应第l+1层的capsule的向量值,只记录第l层的capsule的个数，不记录取值
     """
-
     u_hat = reduce_sum(W * l_input,axis=3,keepdims=True)
     assert u_hat.get_shape() == [128,1152,160,1,1]
 
