@@ -72,7 +72,9 @@ class CapsLayer(object):
                 with tf.variable_scope('routing'):
                     # b_IJ: [batch_size, num_caps_l, num_caps_l_plus_1, 1, 1],
                     # about the reason of using 'batch_size', see issue #21
-                    b_IJ = tf.constant(np.zeros([cfg.batch_size,capsnet_input.shape[1].value,self.num_outputs,1,1],dtype=np.float32))
+                    b_IJ = tf.constant(np.zeros([cfg.batch_size,
+                                                 capsnet_input.shape[1].value,
+                                                 self.num_outputs, 1, 1],dtype=np.float32))
                     capsules = routing(self.input, b_IJ, num_outputs=self.num_outputs, num_dims=self.vec_len)
                     capsules = tf.squeeze(capsules, axis=1)
 
@@ -80,19 +82,20 @@ class CapsLayer(object):
 
 
 def routing(input, b_IJ, num_outputs=10, num_dims=16):
-    ''' The routing algorithm.
+    """
 
-    Args:
-        input: A Tensor with [batch_size, num_caps_l=1152, 1, length(u_i)=8, 1]
-               shape, num_caps_l meaning the number of capsule in the layer l.
-        num_outputs: the number of output capsules.
-        num_dims: the number of dimensions for output capsule.
-    Returns:
-        A Tensor of shape [batch_size, num_caps_l_plus_1, length(v_j)=16, 1]
-        representing the vector output `v_j` in the layer l+1
+    :param input:  A Tensor with [batch_size, num_caps_l=1152, 1, length(u_i)=8, 1] shape,
+                    num_caps_l是前一层输出的capsule的数量
+    :param b_IJ:   A Tensor whth [batch_size,num_caps_l,num_caps_l_plus_1,1,1] shape,
+                    代表两层的capsule的关系，是不是向量的方向？
+    :param num_outputs: 本层输出的capsule的数量
+    :param num_dims:    capsule的维度
+    :return:
+            A Tensor of shape [batch_size, num_caps_l，num_caps_l_plus_1, length(v_j)=16, 1]
+            representing the vector output `v_j` in the layer l+1
     Notes:
-        u_i represents the vector output of capsule i in the layer l, and
-        v_j the vector output of capsule j in the layer l+1.
+        u_i represents the vector output of capsule i in the layer l
+        v_j represents the vector output of capsule j in the layer l+1.
 
         矩阵相乘操作tf.matmul比较耗费时间，可以用一系列操作代替。[a,b]@[b,c]等同于以下操作：
         (1)[a,b]--->[a*c,b],用np.tile或tp.tile实现
@@ -100,13 +103,13 @@ def routing(input, b_IJ, num_outputs=10, num_dims=16):
         (3)[a*c,b]*[c*a,b]
         (4)reduce_sum at axis = 1
         (5) reshape to [a,c]
-     '''
+    """
 
-    # W: [1, num_caps_i, num_caps_j * len_v_j, len_u_j, 1]
     input_shape = get_shape(input)
     W = tf.get_variable('Weight', shape=[1, input_shape[1], num_dims * num_outputs] + input_shape[-2:],
                         dtype=tf.float32, initializer=tf.random_normal_initializer(stddev=cfg.stddev))
     biases = tf.get_variable('bias', shape=(1, 1, num_outputs, num_dims, 1))
+
 
     # Eq.2, calc u_hat
     # Since tf.matmul is a time-consuming op,
